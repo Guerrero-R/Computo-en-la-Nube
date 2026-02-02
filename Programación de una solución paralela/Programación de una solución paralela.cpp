@@ -20,9 +20,9 @@ int main() {
     }
 
     std::vector<float> a(N), b(N), c(N);
-    std::vector<int> thread_used(N, -1);
+    std::vector<int> hilo_usado(N, -1);
 
-    // RNG for filling + sampling (single-thread, after parallel region)
+	// Configuración de la función para la generación de números aleatorios con el metodo Mersenne Twister
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist_val(0.0f, 100.0f);
@@ -33,9 +33,9 @@ int main() {
     }
 //Comprobacion del funcionamiento de OpenMP
 #ifdef _OPENMP
-    std::cout << "OpenMP enabled. _OPENMP=" << _OPENMP << "\n";
+    std::cout << "OpenMP habilitado. _OPENMP=" << _OPENMP << "\n";
 #else
-    std::cout << "WARNING: OpenMP NOT enabled at compile time.\n";
+    std::cout << "OpenMP no habilitado al momento de compilar\n";
 #endif
 
 //Prueba del numero maximo de threads
@@ -43,21 +43,20 @@ int main() {
     {
 #pragma omp single
         {
-            std::cout << "Runtime threads: num_threads=" << omp_get_num_threads()
-                << ", max_threads=" << omp_get_max_threads() << "\n";
+            std::cout << "Numero de hilos en ejecucion=" << omp_get_num_threads()
+                << ", Numero maximo de hilos=" << omp_get_max_threads() << "\n";
         }
     }
 
-    // Choose a chunk that won't collapse to 1 chunk when N is small
+	// Preparacion de los pedazos para la distribución estática
     int T = omp_get_max_threads();
-    int chunk = std::max(1, N / (T * 4));   // heuristic: ~4 chunks per thread
+    int pedazos = std::max(1, N / (T * 4));   
+    std::cout << "Funcion schedule(static," << pedazos << ")\n";
 
-    std::cout << "Using schedule(static," << chunk << ")\n";
-
-#pragma omp parallel for schedule(static, chunk)
+#pragma omp parallel for schedule(static, pedazos)
     for (int i = 0; i < N; i++) {
         c[i] = a[i] + b[i];
-        thread_used[i] = omp_get_thread_num();
+        hilo_usado[i] = omp_get_thread_num();
     }
 
     // Imprimir 10 muestras aleatorias
@@ -73,7 +72,7 @@ int main() {
             << "  a=" << a[i]
             << "  b=" << b[i]
             << "  c=" << c[i]
-            << "  -> hilo " << thread_used[i]
+            << "  -> hilo " << hilo_usado[i]
             << "\n";
     }
 
